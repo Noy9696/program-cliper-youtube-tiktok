@@ -1,0 +1,321 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TikTok Video Optimizer</title>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/style.css') }}"
+    />
+  </head>
+  <body>
+    <div class="container">
+      <!-- Header -->
+      <header class="header">
+        <h1>📱 TikTok Video Optimizer</h1>
+        <p>Advanced Audio Mixing + Sound Effects</p>
+      </header>
+
+      <!-- Main Content -->
+      <div class="content">
+        <!-- Left Panel: Configuration -->
+        <div class="left-panel">
+          <div class="card">
+            <h2>🎬 1. Input Video</h2>
+            <div class="upload-zone" id="videoUploadZone">
+              <input
+                type="file"
+                id="videoInput"
+                accept="video/*"
+                style="display: none"
+              />
+              <div class="upload-placeholder">
+                <span class="upload-icon">📹</span>
+                <p>Click or drag video here</p>
+                <small>Supported: MP4, MOV, AVI, MKV, WEBM</small>
+              </div>
+            </div>
+            <div id="videoInfo" class="video-info" style="display: none">
+              <h3>Video Info:</h3>
+              <table class="info-table">
+                <tr>
+                  <td>📏 Resolution:</td>
+                  <td id="videoResolution">-</td>
+                </tr>
+                <tr>
+                  <td>⏱️ Duration:</td>
+                  <td id="videoDuration">-</td>
+                </tr>
+                <tr>
+                  <td>🎥 FPS:</td>
+                  <td id="videoFPS">-</td>
+                </tr>
+                <tr>
+                  <td>📦 Size:</td>
+                  <td id="videoSize">-</td>
+                </tr>
+                <tr>
+                  <td>🔊 Audio:</td>
+                  <td id="videoAudio">-</td>
+                </tr>
+              </table>
+            </div>
+          </div>
+
+          <div class="card">
+            <h2>🎵 2. Background Audio (Optional)</h2>
+            <label class="checkbox-label">
+              <input type="checkbox" id="useBackgroundAudio" />
+              <span>Add background music</span>
+            </label>
+
+            <div id="backgroundAudioConfig" style="display: none">
+              <div class="upload-zone small" id="bgAudioUploadZone">
+                <input
+                  type="file"
+                  id="bgAudioInput"
+                  accept="audio/*"
+                  style="display: none"
+                />
+                <div class="upload-placeholder">
+                  <span class="upload-icon">🎵</span>
+                  <p>Upload background audio</p>
+                </div>
+              </div>
+              <div id="bgAudioInfo" style="display: none">
+                <p>✅ <span id="bgAudioName">-</span></p>
+              </div>
+
+              <label class="checkbox-label">
+                <input type="checkbox" id="keepOriginalAudio" checked />
+                <span>Keep original video audio</span>
+              </label>
+
+              <div id="volumeControls">
+                <div class="slider-group">
+                  <label
+                    >🎬 Original Audio Volume:
+                    <span id="originalVolumeValue">100</span>%</label
+                  >
+                  <input
+                    type="range"
+                    id="originalVolume"
+                    min="0"
+                    max="200"
+                    value="100"
+                  />
+                </div>
+                <div class="slider-group">
+                  <label
+                    >🎵 Background Volume:
+                    <span id="backgroundVolumeValue">100</span>%</label
+                  >
+                  <input
+                    type="range"
+                    id="backgroundVolume"
+                    min="0"
+                    max="200"
+                    value="100"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <h2>🎬 3. Sound Effects (Optional)</h2>
+            <button class="btn btn-secondary" id="addSoundEffect">
+              + Add Sound Effect
+            </button>
+
+            <div id="soundEffectsList" class="sound-effects-list">
+              <!-- Sound effects akan ditambahkan di sini -->
+            </div>
+          </div>
+
+          <div class="card">
+            <h2>🎨 4. Quality Preset</h2>
+            <div class="preset-options">
+              <label class="preset-option">
+                <input type="radio" name="preset" value="maximum" />
+                <div class="preset-card">
+                  <h3>💎 MAXIMUM</h3>
+                  <p>12 Mbps - Best Quality</p>
+                  <small>Slower upload, best quality</small>
+                </div>
+              </label>
+              <label class="preset-option">
+                <input type="radio" name="preset" value="standard" checked />
+                <div class="preset-card active">
+                  <h3>⭐ STANDARD</h3>
+                  <p>10 Mbps - Recommended</p>
+                  <small>Balanced quality & speed</small>
+                </div>
+              </label>
+              <label class="preset-option">
+                <input type="radio" name="preset" value="balanced" />
+                <div class="preset-card">
+                  <h3>✅ BALANCED</h3>
+                  <p>8 Mbps - Fast Upload</p>
+                  <small>Good quality, faster</small>
+                </div>
+              </label>
+            </div>
+          </div>
+
+          <div class="card">
+            <button class="btn btn-primary btn-large" id="processBtn" disabled>
+              🚀 Start Processing
+            </button>
+          </div>
+        </div>
+
+        <!-- Right Panel: Preview & Progress -->
+        <div class="right-panel">
+          <div class="card">
+            <h2>📺 Video Preview</h2>
+            <div class="video-preview">
+              <video id="videoPreview" controls style="display: none"></video>
+              <div id="videoPreviewPlaceholder" class="preview-placeholder">
+                <span>📹</span>
+                <p>Upload video to preview</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="card" id="processingCard" style="display: none">
+            <h2>⚙️ Processing Status</h2>
+            <div class="progress-container">
+              <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+              </div>
+              <p class="progress-text"><span id="progressPercent">0</span>%</p>
+              <p class="progress-message" id="progressMessage">
+                Initializing...
+              </p>
+            </div>
+          </div>
+
+          <div class="card" id="resultCard" style="display: none">
+            <h2>✅ Processing Complete!</h2>
+            <div class="result-info">
+              <table class="info-table">
+                <tr>
+                  <td>📦 Output Size:</td>
+                  <td id="outputSize">-</td>
+                </tr>
+                <tr>
+                  <td>📉 Compression:</td>
+                  <td id="compressionRatio">-</td>
+                </tr>
+                <tr>
+                  <td>⏱️ Processing Time:</td>
+                  <td id="processingTime">-</td>
+                </tr>
+              </table>
+            </div>
+
+            <div class="video-preview">
+              <video id="resultPreview" controls></video>
+            </div>
+
+            <div class="result-actions">
+              <button class="btn btn-success" id="downloadBtn">
+                📥 Download Video
+              </button>
+              <button class="btn btn-secondary" id="processAnotherBtn">
+                🔄 Process Another
+              </button>
+            </div>
+          </div>
+
+          <div class="card">
+            <h2>📜 Processing History</h2>
+            <div id="historyList" class="history-list">
+              <p class="text-muted">No history yet</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sound Effect Modal -->
+    <div id="soundEffectModal" class="modal" style="display: none">
+      <div class="modal-content">
+        <span class="modal-close">&times;</span>
+        <h2>🎬 Add Sound Effect</h2>
+
+        <div class="form-group">
+          <label>🎵 Sound File:</label>
+          <div class="upload-zone small" id="sfxUploadZone">
+            <input
+              type="file"
+              id="sfxInput"
+              accept="audio/*"
+              style="display: none"
+            />
+            <div class="upload-placeholder">
+              <span class="upload-icon">🎵</span>
+              <p>Upload sound effect</p>
+            </div>
+          </div>
+          <div id="sfxInfo" style="display: none">
+            <p>✅ <span id="sfxName">-</span></p>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>⏱️ Start at (seconds):</label>
+          <input
+            type="number"
+            id="sfxTimestamp"
+            min="0"
+            step="0.1"
+            placeholder="e.g., 10.5"
+          />
+        </div>
+
+        <div class="form-group">
+          <label>⏱️ Duration (seconds, leave empty for full):</label>
+          <input
+            type="number"
+            id="sfxDuration"
+            min="0.1"
+            step="0.1"
+            placeholder="Optional"
+          />
+        </div>
+
+        <div class="form-group">
+          <label>🔊 Volume: <span id="sfxVolumeValue">100</span>%</label>
+          <input type="range" id="sfxVolume" min="0" max="200" value="100" />
+        </div>
+
+        <div class="form-group">
+          <label class="checkbox-label">
+            <input type="checkbox" id="sfxUseFade" />
+            <span>Use fade in/out</span>
+          </label>
+          <div id="sfxFadeConfig" style="display: none">
+            <label>Fade duration (seconds):</label>
+            <input
+              type="number"
+              id="sfxFadeDuration"
+              min="0.1"
+              step="0.1"
+              value="0.5"
+            />
+          </div>
+        </div>
+
+        <div class="modal-actions">
+          <button class="btn btn-primary" id="addSfxBtn">Add Effect</button>
+          <button class="btn btn-secondary modal-close">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+  </body>
+</html>

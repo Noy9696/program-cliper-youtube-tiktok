@@ -1,0 +1,23 @@
+# Ignore everything by default
+*
+
+# Allow directories
+!*/
+
+# Allow Python
+!*.py
+
+# Allow Web files
+!*.html
+!*.css
+!*.js
+
+# Allow config & docs
+!*.json
+!*.yml
+!*.yaml
+!*.txt
+!*.md
+
+# Allow this file
+!.gitignore

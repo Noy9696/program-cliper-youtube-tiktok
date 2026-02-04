@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>🎬 Video Scene Processor</title>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/style.css') }}"
+    />
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <nav class="top-nav">
+          <button class="nav-btn active" onclick="showPage('editor')">
+            ✂️ Scene Editor
+          </button>
+          <button class="nav-btn" onclick="showPage('youtube')">
+            📥 YouTube Downloader
+          </button>
+        </nav>
+      </header>
+
+      <div id="page-editor">
+        <!-- Video Preview Section -->
+        <section class="video-preview">
+          <h2>📹 Video Source Preview</h2>
+          <div class="video-container">
+            <video id="sourceVideo" controls>
+              <source src="/source-video" type="video/mp4" />
+              Browser Anda tidak support video tag.
+            </video>
+            <div class="video-info">
+              <span id="currentTime">00:00</span> /
+              <span id="totalDuration">00:00</span>
+            </div>
+            <button class="btn-use-time" onclick="useCurrentTime()">
+              📌 Gunakan Waktu Ini
+            </button>
+          </div>
+        </section>
+
+        <!-- Scene Input Section -->
+        <section class="scene-input">
+          <h2>✂️ Input Scenes</h2>
+
+          <div class="table-container">
+            <table id="sceneTable">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Start Time</th>
+                  <th>Duration (s)</th>
+                  <th>Posisi Gamer</th>
+                  <th>Border Merah</th>
+                  <th>Blink Start</th>
+                  <th>Blink End</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="sceneTableBody">
+                <!-- Rows akan ditambahkan via JS -->
+              </tbody>
+            </table>
+          </div>
+
+          <button class="btn-add" onclick="addSceneRow()">
+            ➕ Tambah Scene
+          </button>
+        </section>
+
+        <!-- Merge Options -->
+        <section class="merge-options">
+          <h2>🎨 Opsi Merge</h2>
+
+          <div class="options-grid">
+            <div class="option-group">
+              <label>Transisi:</label>
+              <select id="transitionType">
+                <option value="0">Simple Concat (No Transition)</option>
+                <option value="1">Fade</option>
+                <option value="2">Fade Black</option>
+                <option value="3">Wipe Left</option>
+                <option value="4">Wipe Right</option>
+                <option value="5">Slide Down</option>
+                <option value="6">Slide Up</option>
+              </select>
+            </div>
+
+            <div class="option-group">
+              <label>Metode Merge:</label>
+              <select id="mergeMethod">
+                <option value="stepwise">Stepwise (Stabil)</option>
+                <option value="batch">Batch (Cepat)</option>
+              </select>
+            </div>
+          </div>
+
+          <button class="btn-generate" onclick="startProcessing()">
+            🚀 Generate Video
+          </button>
+        </section>
+
+        <!-- Progress Section -->
+        <section
+          class="progress-section"
+          id="progressSection"
+          style="display: none"
+        >
+          <h2>⏳ Processing Progress</h2>
+
+          <div class="progress-bar">
+            <div class="progress-fill" id="progressFill"></div>
+          </div>
+
+          <div class="progress-info">
+            <p id="progressMessage">Idle...</p>
+            <p id="progressScene">Scene: 0/0</p>
+          </div>
+
+          <div id="sceneProgressList" class="scene-progress-list">
+            <!-- Scene progress items akan ditambahkan via JS -->
+          </div>
+        </section>
+
+        <!-- Results Section -->
+        <section
+          class="results-section"
+          id="resultsSection"
+          style="display: none"
+        >
+          <h2>✅ Hasil Processing</h2>
+
+          <div class="results-container">
+            <h3>🎞️ Final Merged Video</h3>
+            <div class="video-result" id="finalVideoResult">
+              <!-- Final video preview akan muncul di sini -->
+            </div>
+
+            <h3>📹 Individual Scenes</h3>
+            <div class="scene-results" id="sceneResults">
+              <!-- Scene videos akan muncul di sini -->
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <div id="page-youtube" style="display: none">
+        <section class="scene-input">
+          <h2>📥 YouTube Downloader</h2>
+
+          <input
+            type="text"
+            id="ytUrl"
+            placeholder="Paste link YouTube di sini..."
+            style="width: 100%; padding: 12px; margin-bottom: 10px"
+          />
+
+          <button class="btn-generate" onclick="startYoutubeDownload()">
+            ⬇️ Download Video
+          </button>
+
+          <div style="margin-top: 20px">
+            <div class="progress-bar">
+              <div class="progress-fill" id="ytProgressFill"></div>
+            </div>
+            <p id="ytProgressText">Idle...</p>
+          </div>
+
+          <hr />
+
+          <h3>📹 Preview Video</h3>
+          <video id="ytPreview" controls style="display: none"></video>
+        </section>
+
+        <section class="video-library">
+          <h2>📂 Semua Video</h2>
+          <div id="videoList" class="video-grid"></div>
+        </section>
+      </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+  </body>
+</html>
