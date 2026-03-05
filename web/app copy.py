@@ -6,58 +6,25 @@ import threading
 import time
 from yt_downloader import download_youtube, progress as yt_progress
 
-# ✅ FIX: Import dari file yang benar (video_processor_qsv.py)
-# Letakkan file video_processor_qsv.py di folder web/
-# lalu rename/copy jadi web/video_processor_qsv.py
-import importlib.util, sys
-
-def _load_processor():
-    """Load video processor dari path relatif agar fleksibel."""
-    candidates = [
-        os.path.join(os.path.dirname(__file__), "web", "video_processor_qsv.py"),
-        os.path.join(os.path.dirname(__file__), "video_processor_qsv.py"),
-        os.path.join(os.path.dirname(__file__), "web", "video_processor2.py"),  # fallback lama
-    ]
-    for path in candidates:
-        if os.path.exists(path):
-            spec = importlib.util.spec_from_file_location("video_processor", path)
-            mod  = importlib.util.module_from_spec(spec)
-            spec.loader.exec_module(mod)
-            print(f"✅ Loaded processor: {path}")
-            return mod
-    raise ImportError("❌ Tidak ada file video_processor yang ditemukan! "
-                      "Letakkan video_processor_qsv.py di folder web/ atau root.")
-
-_vp = _load_processor()
-process_scene                          = _vp.process_scene
-merge_videos_simple                    = _vp.merge_videos_simple
-merge_videos_with_transition_stepwise  = _vp.merge_videos_with_transition_stepwise
-merge_videos_with_transition_batch     = _vp.merge_videos_with_transition_batch
-to_sec                                 = _vp.to_sec
-sec_to_time                            = _vp.sec_to_time
+from video_processor import (
+    process_scene, 
+    merge_videos_simple, 
+    merge_videos_with_transition_stepwise,
+    merge_videos_with_transition_batch,
+    to_sec,
+    sec_to_time
+)
 
 app = Flask(__name__)
 CORS(app)
 
-# ========================================
-# CONFIGURATION
-# ========================================
-FFMPEG     = r"C:\ffmpeg\ffmpeg-2026-01-12-git-21a3e44fbe-essentials_build\bin\ffmpeg.exe"
-SOURCE     = r"D:\CLIP\hasil\Mentah.mp4"
+# Configuration
+FFMPEG = r"C:\ffmpeg\ffmpeg-2026-01-12-git-21a3e44fbe-essentials_build\bin\ffmpeg.exe"
+SOURCE = r"D:\CLIP\hasil\Mentah.mp4"
 OUTPUT_DIR = r"D:\CLIP\hasil"
 FINAL_OUTPUT = os.path.join(OUTPUT_DIR, "final_merged.mp4")
 
-# ✅ Sync config ke processor module agar path konsisten
-def _sync_processor_config():
-    _vp.SOURCE     = SOURCE
-    _vp.OUTPUT_DIR = OUTPUT_DIR
-    _vp.FFMPEG     = FFMPEG
-
-_sync_processor_config()
-
-# ========================================
-# GLOBAL STATUS
-# ========================================
+# Global variables untuk tracking progress
 processing_status = {
     'is_processing': False,
     'current_scene': 0,
@@ -70,31 +37,30 @@ processing_status = {
     'error': None
 }
 
-# ========================================
-# ROUTES
-# ========================================
-
 @app.route('/')
 def index():
+    """Render halaman utama"""
     return render_template('index.html', video_source=SOURCE)
 
 @app.route('/api/video-info')
 def video_info():
+    """Get video duration dan info lainnya"""
     import subprocess
+    
     probe_cmd = [FFMPEG, "-i", SOURCE]
     result = subprocess.run(probe_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-
+    
     duration = 0
     for line in result.stderr.split('\n'):
         if 'Duration:' in line:
             try:
                 time_str = line.split('Duration:')[1].split(',')[0].strip()
-                h, m, s  = time_str.split(':')
+                h, m, s = time_str.split(':')
                 duration = float(h) * 3600 + float(m) * 60 + float(s)
                 break
-            except Exception:
+            except:
                 pass
-
+    
     return jsonify({
         'duration': duration,
         'duration_formatted': sec_to_time(int(duration)),
@@ -104,19 +70,20 @@ def video_info():
 
 @app.route('/api/process', methods=['POST'])
 def process_videos():
+    """Process video dengan scenes yang diinput"""
     global processing_status
-
+    
     if processing_status['is_processing']:
         return jsonify({'error': 'Already processing'}), 400
-
-    data           = request.json
-    scenes         = data.get('scenes', [])
+    
+    data = request.json
+    scenes = data.get('scenes', [])
     transition_type = data.get('transition_type', '0')
-    merge_method   = data.get('merge_method', 'stepwise')
-
+    merge_method = data.get('merge_method', 'stepwise')
+    
     if not scenes:
         return jsonify({'error': 'No scenes provided'}), 400
-
+    
     # Reset status
     processing_status = {
         'is_processing': True,
@@ -129,119 +96,104 @@ def process_videos():
         'final_output': None,
         'error': None
     }
-
-    thread = threading.Thread(
-        target=process_worker,
-        args=(scenes, transition_type, merge_method),
-        daemon=True
-    )
+    
+    # Start processing di thread terpisah
+    thread = threading.Thread(target=process_worker, args=(scenes, transition_type, merge_method))
+    thread.daemon = True
     thread.start()
-
+    
     return jsonify({'status': 'started'})
 
-
 def process_worker(scenes, transition_type, merge_method):
-    """Worker thread — process scenes lalu merge."""
+    """Worker function untuk processing video"""
     global processing_status
-
-    # ✅ Sync ulang sebelum jalan, karena SOURCE bisa berubah via /api/set-source
-    _sync_processor_config()
-
+    
     try:
         scene_files = []
-
+        
+        # Process setiap scene
         for idx, scene in enumerate(scenes, 1):
             processing_status['current_scene'] = idx
-            processing_status['status']  = 'processing_scene'
+            processing_status['status'] = 'processing_scene'
             processing_status['message'] = f'Processing scene {idx}/{len(scenes)}...'
-
+            
             output_file = os.path.join(OUTPUT_DIR, f"scene_{idx:03d}.mp4")
-
+            
+            # Convert start time to seconds
             start_sec = to_sec(scene['start_time'])
-            duration  = int(scene['duration'])
-
+            duration = int(scene['duration'])
+            
+            # Blink config
             blink_config = {
                 'enabled': scene.get('blink_enabled', False),
-                'start':   scene.get('blink_start', 0),
-                'end':     scene.get('blink_end', 0)
+                'start': scene.get('blink_start', 0),
+                'end': scene.get('blink_end', 0)
             }
-
-            # ✅ FIX: Kirim source_video agar processor pakai SOURCE yang benar
+            
+            # Process scene
             success = process_scene(
-                scene_num    = idx,
-                start_time   = start_sec,
-                duration     = duration,
-                output_path  = output_file,
-                blink_config = blink_config,
-                gamer_position = scene.get('gamer_position', 'atas'),
-                source_video = SOURCE,        # ← ini yang hilang sebelumnya
+                idx,
+                start_sec,
+                duration,
+                output_file,
+                blink_config,
+                scene.get('gamer_position', 'atas')
             )
-
-            if success and os.path.exists(output_file):
+            
+            if success:
                 scene_files.append(output_file)
                 processing_status['scene_files'].append({
-                    'number':   idx,
-                    'path':     output_file,
+                    'number': idx,
+                    'path': output_file,
                     'filename': os.path.basename(output_file),
-                    'size':     os.path.getsize(output_file)
+                    'size': os.path.getsize(output_file)
                 })
             else:
                 raise Exception(f"Failed to process scene {idx}")
-
-            # Progress 0–50% untuk scene processing
-            processing_status['progress'] = int((idx / len(scenes)) * 50)
-
-        # ── MERGE ──────────────────────────────────────────────
-        processing_status['status']  = 'merging'
+            
+            # Update progress
+            processing_status['progress'] = int((idx / len(scenes)) * 50)  # 0-50% untuk scenes
+        
+        # Merge videos
+        processing_status['status'] = 'merging'
         processing_status['message'] = 'Menggabungkan scenes...'
-        processing_status['progress'] = 55
-
+        
         if transition_type == '0':
-            success = merge_videos_simple(
-                scene_files, FINAL_OUTPUT, OUTPUT_DIR
-            )
+            success = merge_videos_simple(scene_files, FINAL_OUTPUT)
         else:
             if merge_method == 'stepwise':
-                success = merge_videos_with_transition_stepwise(
-                    scene_files, FINAL_OUTPUT, transition_type, OUTPUT_DIR
-                )
+                success = merge_videos_with_transition_stepwise(scene_files, FINAL_OUTPUT, transition_type)
             else:
-                success = merge_videos_with_transition_batch(
-                    scene_files, FINAL_OUTPUT, transition_type
-                )
-
-        if success and os.path.exists(FINAL_OUTPUT):
-            processing_status['status']   = 'completed'
-            processing_status['message']  = '✅ Proses selesai!'
+                success = merge_videos_with_transition_batch(scene_files, FINAL_OUTPUT, transition_type)
+        
+        if success:
+            processing_status['status'] = 'completed'
+            processing_status['message'] = 'Proses selesai!'
             processing_status['progress'] = 100
             processing_status['final_output'] = {
-                'path':     FINAL_OUTPUT,
+                'path': FINAL_OUTPUT,
                 'filename': os.path.basename(FINAL_OUTPUT),
-                'size':     os.path.getsize(FINAL_OUTPUT)
+                'size': os.path.getsize(FINAL_OUTPUT)
             }
         else:
-            raise Exception("Merge failed atau output file tidak ditemukan")
-
+            raise Exception("Merge failed")
+    
     except Exception as e:
-        processing_status['status']  = 'error'
+        processing_status['status'] = 'error'
         processing_status['message'] = str(e)
-        processing_status['error']   = str(e)
-        print(f"\n❌ process_worker error: {e}")
-
+        processing_status['error'] = str(e)
+    
     finally:
         processing_status['is_processing'] = False
 
-
-# ========================================
-# STATUS & FILE ROUTES
-# ========================================
-
 @app.route('/api/status')
 def get_status():
+    """Get current processing status"""
     return jsonify(processing_status)
 
 @app.route('/api/download/<path:filename>')
 def download_file(filename):
+    """Download processed video"""
     file_path = os.path.join(OUTPUT_DIR, filename)
     if os.path.exists(file_path):
         return send_file(file_path, as_attachment=True)
@@ -249,6 +201,7 @@ def download_file(filename):
 
 @app.route('/video/<path:filename>')
 def serve_video(filename):
+    """Serve video untuk preview"""
     file_path = os.path.join(OUTPUT_DIR, filename)
     if os.path.exists(file_path):
         return send_file(file_path, mimetype='video/mp4')
@@ -259,7 +212,7 @@ def serve_source_video():
     if not os.path.exists(SOURCE):
         return jsonify({'error': 'Source video not found'}), 404
 
-    file_size    = os.path.getsize(SOURCE)
+    file_size = os.path.getsize(SOURCE)
     range_header = request.headers.get('Range', None)
 
     if not range_header:
@@ -267,29 +220,31 @@ def serve_source_video():
 
     byte1, byte2 = 0, None
     match = range_header.replace('bytes=', '').split('-')
+
     if match[0]:
         byte1 = int(match[0])
     if len(match) > 1 and match[1]:
         byte2 = int(match[1])
 
-    byte2  = byte2 if byte2 is not None else file_size - 1
+    byte2 = byte2 if byte2 is not None else file_size - 1
     length = byte2 - byte1 + 1
 
     with open(SOURCE, 'rb') as f:
         f.seek(byte1)
         data = f.read(length)
 
-    rv = Response(data, 206, mimetype='video/mp4',
-                  content_type='video/mp4', direct_passthrough=True)
-    rv.headers.add('Content-Range',  f'bytes {byte1}-{byte2}/{file_size}')
-    rv.headers.add('Accept-Ranges',  'bytes')
+    rv = Response(
+        data,
+        206,
+        mimetype='video/mp4',
+        content_type='video/mp4',
+        direct_passthrough=True
+    )
+    rv.headers.add('Content-Range', f'bytes {byte1}-{byte2}/{file_size}')
+    rv.headers.add('Accept-Ranges', 'bytes')
     rv.headers.add('Content-Length', str(length))
     return rv
 
-
-# ========================================
-# YOUTUBE ROUTES
-# ========================================
 
 @app.route('/api/youtube/download', methods=['POST'])
 def youtube_download():
@@ -303,11 +258,14 @@ def youtube_download():
     def worker():
         global SOURCE
         SOURCE = download_youtube(url)
-        _sync_processor_config()   # ✅ Sync SOURCE ke processor setelah download
+
+        # pastikan file siap dibaca
         for _ in range(10):
             if os.path.exists(SOURCE) and os.path.getsize(SOURCE) > 5_000_000:
                 break
             time.sleep(0.5)
+
+
 
     threading.Thread(target=worker, daemon=True).start()
     return jsonify({'status': 'started'})
@@ -317,9 +275,12 @@ def youtube_progress():
     return jsonify(yt_progress)
 
 
-# ========================================
-# VIDEO LIST & SET SOURCE
-# ========================================
+if __name__ == '__main__':
+    # Ensure output directory exists
+    if not os.path.exists(OUTPUT_DIR):
+        os.makedirs(OUTPUT_DIR)
+    
+    app.run(debug=True, host='0.0.0.0', port=5000, threaded=True)
 
 @app.route('/api/videos')
 def list_videos():
@@ -329,28 +290,19 @@ def list_videos():
             path = os.path.join(OUTPUT_DIR, f)
             videos.append({
                 'filename': f,
-                'size':     os.path.getsize(path)
+                'size': os.path.getsize(path)
             })
+
     return jsonify(sorted(videos, key=lambda x: x['filename']))
 
 @app.route('/api/set-source', methods=['POST'])
 def set_source():
     global SOURCE
     filename = request.json.get('filename')
-    path     = os.path.join(OUTPUT_DIR, filename)
 
+    path = os.path.join(OUTPUT_DIR, filename)
     if not os.path.exists(path):
         return jsonify({'error': 'File not found'}), 404
 
     SOURCE = path
-    _sync_processor_config()   # ✅ Sync SOURCE ke processor
     return jsonify({'status': 'ok', 'source': filename})
-
-
-# ========================================
-# MAIN
-# ========================================
-
-if __name__ == '__main__':
-    os.makedirs(OUTPUT_DIR, exist_ok=True)
-    app.run(debug=True, host='0.0.0.0', port=5000, threaded=True)

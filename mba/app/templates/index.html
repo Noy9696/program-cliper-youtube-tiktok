@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Google Maps Scraper Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            color: #667eea;
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .content {
+            display: grid;
+            grid-template-columns: 400px 1fr;
+            gap: 30px;
+        }
+
+        .form-panel {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            height: fit-content;
+        }
+
+        .form-panel h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .checkbox-group {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .checkbox-group label {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-weight: normal;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .jobs-panel {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .jobs-panel h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 20px;
+        }
+
+        .job-card {
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+            padding: 20px;
+            margin-bottom: 15px;
+            border-radius: 8px;
+            transition: transform 0.2s;
+        }
+
+        .job-card:hover {
+            transform: translateX(5px);
+        }
+
+        .job-card.queued {
+            border-left-color: #ffc107;
+        }
+
+        .job-card.processing {
+            border-left-color: #17a2b8;
+        }
+
+        .job-card.completed {
+            border-left-color: #28a745;
+        }
+
+        .job-card.error {
+            border-left-color: #dc3545;
+        }
+
+        .job-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .job-id {
+            font-weight: 600;
+            color: #667eea;
+        }
+
+        .job-status {
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .status-queued { background: #fff3cd; color: #856404; }
+        .status-processing { background: #d1ecf1; color: #0c5460; }
+        .status-completed { background: #d4edda; color: #155724; }
+        .status-error { background: #f8d7da; color: #721c24; }
+
+        .job-message {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e0e0e0;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 10px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            transition: width 0.3s;
+        }
+
+        .job-files {
+            margin-top: 10px;
+        }
+
+        .file-link {
+            display: inline-block;
+            padding: 8px 15px;
+            background: #667eea;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            font-size: 13px;
+            margin-right: 10px;
+            margin-bottom: 5px;
+            transition: background 0.3s;
+        }
+
+        .file-link:hover {
+            background: #5568d3;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #999;
+        }
+
+        .empty-state svg {
+            width: 100px;
+            height: 100px;
+            margin-bottom: 20px;
+            opacity: 0.3;
+        }
+
+        @media (max-width: 1024px) {
+            .content {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🗺️ Google Maps Review Scraper</h1>
+            <p>Scrape multiple places dengan sistem antrian otomatis</p>
+        </div>
+
+        <div class="content">
+           <!-- Form Panel -->
+<div class="form-panel">
+    <h2>📝 Tambah Job Baru</h2>
+    
+    <div class="form-group">
+        <label>📍 Nama Tempat</label>
+        <input type="text" id="placeNameInput" placeholder="Contoh: Best Motor Jatimulyo">
+    </div>
+
+    <div class="form-group">
+        <label>⭐ Filter Rating</label>
+        <select id="ratingFilter">
+            <option value="all">Semua Rating</option>
+            <option value="5">Rating 5 ⭐</option>
+            <option value="4">Rating 4 ⭐</option>
+            <option value="3">Rating 3 ⭐</option>
+            <option value="2">Rating 2 ⭐</option>
+            <option value="1">Rating 1 ⭐</option>
+            <option value="positive">Rating 4-5 (Positif)</option>
+            <option value="negative">Rating 1-3 (Negatif)</option>
+        </select>
+    </div>
+
+    <div class="form-group">
+        <label>📊 Jumlah Review</label>
+        <select id="maxReviews">
+            <option value="all">Semua Review</option>
+            <option value="10">10 Reviews</option>
+            <option value="25">25 Reviews</option>
+            <option value="50">50 Reviews</option>
+            <option value="100">100 Reviews</option>
+        </select>
+    </div>
+
+    <div class="form-group">
+        <label>💾 Format Output</label>
+        <div class="checkbox-group">
+            <label>
+                <input type="checkbox" class="format-checkbox" value="json" checked> JSON
+            </label>
+            <label>
+                <input type="checkbox" class="format-checkbox" value="csv"> CSV
+            </label>
+            <label>
+                <input type="checkbox" class="format-checkbox" value="excel"> Excel
+            </label>
+        </div>
+    </div>
+
+    <button class="btn" onclick="addJob()">➕ Tambah ke Queue</button>
+</div>
+
+            <!-- Jobs Panel -->
+            <div class="jobs-panel">
+                <h2>📋 Job Queue & Status</h2>
+                <div id="jobsList">
+                    <div class="empty-state">
+                        <svg fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"></path>
+                            <path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clip-rule="evenodd"></path>
+                        </svg>
+                        <p>Belum ada job. Tambahkan URL untuk memulai!</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let updateInterval;
+
+       function addJob() {
+    const placeName = document.getElementById('placeNameInput').value.trim();
+    const ratingFilter = document.getElementById('ratingFilter').value;
+    const maxReviews = document.getElementById('maxReviews').value;
+    
+    const formatCheckboxes = document.querySelectorAll('.format-checkbox:checked');
+    const outputFormats = Array.from(formatCheckboxes).map(cb => cb.value);
+
+    if (!placeName) {
+        alert('Masukkan nama tempat!');
+        return;
+    }
+
+    if (outputFormats.length === 0) {
+        alert('Pilih minimal 1 format output!');
+        return;
+    }
+
+    fetch('/api/add_job', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            place_name: placeName,
+            filter_rating: ratingFilter,
+            max_reviews: maxReviews,
+            output_formats: outputFormats
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            document.getElementById('placeNameInput').value = '';
+            updateJobsList();
+            
+            if (!updateInterval) {
+                updateInterval = setInterval(updateJobsList, 2000);
+            }
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Gagal menambahkan job!');
+    });
+}
+
+        function updateJobsList() {
+            fetch('/api/jobs_status')
+                .then(response => response.json())
+                .then(jobs => {
+                    const jobsList = document.getElementById('jobsList');
+                    
+                    if (Object.keys(jobs).length === 0) {
+                        jobsList.innerHTML = `
+                            <div class="empty-state">
+                                <svg fill="currentColor" viewBox="0 0 20 20">
+                                    <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"></path>
+                                    <path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clip-rule="evenodd"></path>
+                                </svg>
+                                <p>Belum ada job. Tambahkan URL untuk memulai!</p>
+                            </div>
+                        `;
+                        return;
+                    }
+
+                    let html = '';
+                    
+                    // Sort jobs by ID descending
+                    const sortedJobs = Object.entries(jobs).sort((a, b) => b[0] - a[0]);
+                    
+                    sortedJobs.forEach(([jobId, job]) => {
+                        html += `
+                            <div class="job-card ${job.status}">
+                                <div class="job-header">
+                                    <span class="job-id">Job #${jobId}</span>
+                                    <span class="job-status status-${job.status}">${job.status}</span>
+                                </div>
+                                <div class="job-message">${job.message}</div>
+                                ${job.place_name ? `<div style="font-weight:600; margin-bottom:10px;">📍 ${job.place_name}</div>` : ''}
+                                <div class="progress-bar">
+                                    <div class="progress-fill" style="width: ${job.progress}%"></div>
+                                </div>
+                                ${job.files ? `
+                                    <div class="job-files">
+                                        ${job.files.map(file => `
+                                            <a href="/api/download/${file}" class="file-link" target="_blank">
+                                                📥 ${file.split('/').pop()}
+                                            </a>
+                                        `).join('')}
+                                    </div>
+                                ` : ''}
+                            </div>
+                        `;
+                    });
+
+                    jobsList.innerHTML = html;
+                })
+                .catch(error => {
+                    console.error('Error updating jobs:', error);
+                });
+        }
+
+        // Initial update
+        updateJobsList();
+        updateInterval = setInterval(updateJobsList, 2000);
+    </script>
+</body>
+</html>

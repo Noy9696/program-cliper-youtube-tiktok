@@ -10,6 +10,12 @@ TRANSITION_VIDEO = r"D:\CLIP\hasil\dasar\TV.mp4"  # Video transisi 1 detik
 OUTPUT_FILE = r"D:\CLIP\hasil\onlday1.mp4"
 
 # ========================================
+# 🎬 INTRO SETTINGS - BARU!
+# ========================================
+USE_INTRO = True  # Set False kalau ga mau intro di awal
+INTRO_AT_START = True  # True = TV.mp4 di awal, False = di akhir aja (sebagai transisi)
+
+# ========================================
 # 💧 WATERMARK - EDIT DI SINI
 # ========================================
 WATERMARK_TEXT = ""
@@ -23,15 +29,16 @@ WATERMARK_OPACITY = "0.15"  # Transparansi (0.1 = sangat tipis, 0.3 = agak teran
 # 📝 TEKS TETAP (MUNCUL DI SEMUA VIDEO)
 # ========================================
 LIVE_TEXT = ""  # Baris paling atas (kosongkan jika ga mau)
-HEADER_TEXT = "JUMSCARE WINDAH JAM SHUR"    # Judul utama
+HEADER_TEXT = "Windah petualangan jokowi"    # Judul utama
 
 # ========================================
 # 📝 TEKS PER SCENE - EDIT DI SINI
 # ========================================
 SCENE_DESCRIPTIONS = [
-    "Diikutin Kuntican",
-    "Baru mau nyapa",
-    "Gimik skil isue"
+    "Kalau ada siapa bang?",
+    "jangan nyawi apa bang?",
+    
+    
 ]
 
 # ========================================
@@ -73,9 +80,11 @@ MAX_VISIBLE_SCENES = 5  # Maksimal 5 baris scene yang keliatan
 # ========================================
 print("="*60)
 print("🎬 VIDEO MERGER - PROGRESSIVE SCENE LIST + WATERMARK")
+print("   🆕 WITH INTRO AT START!")
 print("="*60)
 print(f"📁 Video folder: {VIDEO_FOLDER}")
 print(f"🎞️  Transition: {TRANSITION_VIDEO}")
+print(f"🎬 Intro at start: {'✅ YES' if USE_INTRO and INTRO_AT_START else '❌ NO'}")
 print(f"💾 Output: {OUTPUT_FILE}")
 print(f"🎨 Font: {FONT_FILE}")
 print(f"📊 Max visible scenes: {MAX_VISIBLE_SCENES}")
@@ -174,14 +183,15 @@ for current_scene_idx, (video_file, description) in enumerate(zip(video_files, S
     # ========================================
     # 💧 WATERMARK DI TENGAH (PERTAMA KALI!)
     # ========================================
-    filters.append(
-        f"drawtext=text='{watermark_escaped}':"
-        f"font={WATERMARK_FONT}:"
-        f"fontsize={WATERMARK_FONT_SIZE}:"
-        f"fontcolor={WATERMARK_COLOR}@{WATERMARK_OPACITY}:"  # @ untuk alpha/opacity
-        f"x=(w-text_w)/2:"  # Tengah horizontal
-        f"y=(h-text_h)/2"   # Tengah vertikal
-    )
+    if WATERMARK_TEXT:
+        filters.append(
+            f"drawtext=text='{watermark_escaped}':"
+            f"font={WATERMARK_FONT}:"
+            f"fontsize={WATERMARK_FONT_SIZE}:"
+            f"fontcolor={WATERMARK_COLOR}@{WATERMARK_OPACITY}:"  # @ untuk alpha/opacity
+            f"x=(w-text_w)/2:"  # Tengah horizontal
+            f"y=(h-text_h)/2"   # Tengah vertikal
+        )
     
     # BARIS 1: Live info (opsional)
     if LIVE_TEXT:
@@ -218,7 +228,7 @@ for current_scene_idx, (video_file, description) in enumerate(zip(video_files, S
     for scene_idx in range(start_idx, end_idx):
         scene_num = scene_idx + 1
         scene_desc = SCENE_DESCRIPTIONS[scene_idx]
-        scene_text = f"{scene_num}. {scene_desc}"
+        scene_text = f"{scene_desc}"
         scene_escaped = scene_text.replace("\\", "\\\\").replace(":", "\\:").replace("'", "\\'")
         
         # Tentukan warna berdasarkan status
@@ -277,14 +287,26 @@ for current_scene_idx, (video_file, description) in enumerate(zip(video_files, S
 print(f"\n🔗 Step 2: Menggabung semua video dengan transisi...")
 print("="*60)
 
-# Buat concat list: video1 -> trans -> video2 -> trans -> ...
+# ========================================
+# 🆕 BARU: INTRO DI AWAL!
+# ========================================
+# Buat concat list dengan struktur:
+# INTRO -> video1 -> trans -> video2 -> trans -> video3
 concat_list = []
+
+# Tambahkan semua video dengan transisi di antara mereka
 for i, temp_video in enumerate(temp_videos_with_text):
     concat_list.append(temp_video)
     if i < len(temp_videos_with_text) - 1:
         concat_list.append(TRANSITION_VIDEO)
 
-print(f"   Total item untuk digabung: {len(concat_list)}")
+if USE_INTRO and INTRO_AT_START:
+    print(f"   🎬 Adding INTRO at the beginning!")
+    total_items = len(concat_list) + 1  # +1 untuk intro
+else:
+    total_items = len(concat_list)
+
+print(f"   Total item untuk digabung: {total_items}")
 
 # Re-encode semua dulu biar sama format
 print(f"\n📦 Step 3: Re-encoding untuk kompatibilitas...")
@@ -335,8 +357,16 @@ for i, temp_video in enumerate(temp_videos_with_text, 1):
     subprocess.run(cmd, capture_output=True, text=True)
     print("✅")
 
-# Update concat list dengan file normalized
+# ========================================
+# 🆕 BUILD FINAL CONCAT LIST WITH INTRO
+# ========================================
 concat_list_final = []
+
+# TAMBAHKAN INTRO DI AWAL!
+if USE_INTRO and INTRO_AT_START:
+    concat_list_final.append(temp_trans)
+
+# Lalu tambahkan video-video dengan transisi di antaranya
 for i, temp_norm in enumerate(final_temp_list):
     concat_list_final.append(temp_norm)
     if i < len(final_temp_list) - 1:
@@ -348,6 +378,18 @@ with open(list_file, "w", encoding="utf-8") as f:
     for video in concat_list_final:
         escaped_path = video.replace("\\", "/")
         f.write(f"file '{escaped_path}'\n")
+
+print(f"\n📋 Concat order:")
+for i, v in enumerate(concat_list_final, 1):
+    is_intro = (i == 1 and USE_INTRO and INTRO_AT_START)
+    is_trans = (os.path.basename(v) == os.path.basename(temp_trans))
+    
+    if is_intro:
+        print(f"   {i}. 🎬 INTRO (TV.mp4)")
+    elif is_trans:
+        print(f"   {i}. ➡️  Transition")
+    else:
+        print(f"   {i}. 📹 Scene")
 
 # Final merge
 print(f"\n🎬 Step 4: Final merge...")
@@ -381,10 +423,21 @@ if result.returncode == 0:
     print(f"\n✅ SELESAI!")
     print(f"📁 Output: {OUTPUT_FILE}")
     print(f"📊 Size: {output_size:.1f} MB")
-    print(f"\n💧 Watermark Settings:")
-    print(f"   ✅ Text: {WATERMARK_TEXT}")
-    print(f"   ✅ Position: CENTER")
-    print(f"   ✅ Opacity: {WATERMARK_OPACITY}")
+    
+    if USE_INTRO and INTRO_AT_START:
+        print(f"\n🎬 Structure:")
+        print(f"   1. INTRO (TV.mp4)")
+        print(f"   2. Scene 1")
+        print(f"   3. Transition")
+        print(f"   4. Scene 2")
+        print(f"   ... dst")
+    
+    if WATERMARK_TEXT:
+        print(f"\n💧 Watermark Settings:")
+        print(f"   ✅ Text: {WATERMARK_TEXT}")
+        print(f"   ✅ Position: CENTER")
+        print(f"   ✅ Opacity: {WATERMARK_OPACITY}")
+    
     print(f"\n📝 Progressive List Features:")
     print(f"   ✅ Scene active: PUTIH TERANG")
     print(f"   ✅ Scene done: ABU-ABU MEDIUM")

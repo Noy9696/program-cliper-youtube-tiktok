@@ -3,23 +3,21 @@ import yt_dlp
 url = input("Masukkan link YouTube: ").strip()
 
 ydl_opts = {
-    'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/bestvideo+bestaudio/best',
-    
+    'format': '299+251/303+251/bestvideo[height<=1080]+bestaudio/best',
     'outtmpl': 'D:/Clip/hasil/%(title)s.%(ext)s',
-    'merge_output_format': 'mp4',
-    
-    # ✅ Ga perlu ffmpeg_location kalau udah masuk PATH
+    'merge_output_format': 'mp4',  # ✅ Ini sudah cukup buat merge
     
     'cookiefile': 'D:/Clip/cookies.txt',
     'noplaylist': True,
-    'live_from_start': False,
     'retries': 10,
     'fragment_retries': 10,
 }
 
-print("⏬ Download LIVE REPLAY (MAX QUALITY)...")
+print("⏬ Download LIVE REPLAY (1080p + AUDIO)...")
 
-with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-    ydl.download([url])
-
-print("✅ SELESAI")
+try:
+    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+        ydl.download([url])
+    print("\n✅ SELESAI dengan AUDIO! Cek D:/Clip/hasil/")
+except Exception as e:
+    print(f"\n❌ ERROR: {e}")

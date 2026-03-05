@@ -17,6 +17,9 @@ ydl_opts = {
     # ✅ Fix JS challenge solver — setara --remote-components ejs:github
     'remote_components': ['ejs:github'],
 
+    # ✅ Tunjuk lokasi ffmpeg
+    'ffmpeg_location': r'C:\ffmpeg\ffmpeg-2026-01-12-git-21a3e44fbe-essentials_build\bin',
+
     # ✅ Postprocessor untuk merge tanpa re-encode (lebih cepat & lossless)
     'postprocessors': [{
         'key': 'FFmpegVideoConvertor',
