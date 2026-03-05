@@ -21,3 +21,5 @@
 
 # Allow this file
 !.gitignore
+cookies.txt
+*/cookies.txt
